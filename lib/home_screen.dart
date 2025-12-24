@@ -5,6 +5,8 @@ import 'suppliers_page.dart';
 import 'warehouses_page.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -35,8 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           children: [
             DrawerHeader(
+              decoration: BoxDecoration(color: const Color.fromARGB(255, 94, 61, 19)),
               child: Text('Меню', style: TextStyle(fontSize: 24, color: Colors.white)),
-              decoration: BoxDecoration(color: Colors.blue),
             ),
             ListTile(
               leading: Icon(Icons.home),

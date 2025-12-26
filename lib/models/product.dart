@@ -1,28 +1,28 @@
 class Product {
   final int productID;
   final String name;
-  final int warehouseID;
-  final int supplierID;
+  final double price;
+  final String code;
+  final String warehouse;
   final int quantity;
-  final String productCode;
 
   Product({
     required this.productID,
     required this.name,
-    required this.warehouseID,
-    required this.supplierID,
+    required this.price,
+    required this.code,
+    required this.warehouse,
     required this.quantity,
-    required this.productCode,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       productID: json['productID'],
       name: json['name'],
-      warehouseID: json['warehouseID'],
-      supplierID: json['supplierID'],
+      price: (json['price'] as num).toDouble(),
+      code: json['code'],
+      warehouse: json['warehouse'],
       quantity: json['quantity'],
-      productCode: json['productCode'],
     );
   }
 }

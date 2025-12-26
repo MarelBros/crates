@@ -1,3 +1,4 @@
+import 'package:crates/transactions_page.dart';
 import 'package:flutter/material.dart';
 import 'main_page.dart';
 import 'products_page.dart';
@@ -13,17 +14,29 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  Map<String, dynamic>? currentUser; 
 
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0:
-        return MainPage();
+        return MainPage(
+          onLoginChanged: (user) {
+            setState(() {
+              currentUser = user;
+              if (currentUser == null) {
+                _selectedIndex = 0; 
+              }
+            });
+          },
+        );
       case 1:
-        return ProductsPage();
+        return ProductsPage(); 
       case 2:
-        return SuppliersPage();
+        return SuppliersPage(currentUser: currentUser); 
       case 3:
-        return WarehousesPage();
+        return WarehousesPage(currentUser: currentUser); 
+      case 4:
+        return TransactionsPage(); 
       default:
         return Center(child: Text('Ошибка выбора'));
     }
@@ -42,27 +55,52 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: Icon(Icons.home),
-              title: Text('Главное'),
+              title: Text('Главная'),
               selected: _selectedIndex == 0,
-              onTap: () => setState(() { _selectedIndex = 0; Navigator.pop(context); }),
+              onTap: () => setState(() {
+                _selectedIndex = 0;
+                Navigator.pop(context);
+              }),
             ),
             ListTile(
               leading: Icon(Icons.shopping_cart),
               title: Text('Товары'),
               selected: _selectedIndex == 1,
-              onTap: () => setState(() { _selectedIndex = 1; Navigator.pop(context); }),
+              enabled: currentUser != null,
+              onTap: () => setState(() {
+                _selectedIndex = 1;
+                Navigator.pop(context);
+              }),
             ),
             ListTile(
               leading: Icon(Icons.people),
               title: Text('Поставщики'),
               selected: _selectedIndex == 2,
-              onTap: () => setState(() { _selectedIndex = 2; Navigator.pop(context); }),
+              enabled: currentUser != null,
+              onTap: () => setState(() {
+                _selectedIndex = 2;
+                Navigator.pop(context);
+              }),
             ),
             ListTile(
               leading: Icon(Icons.store),
               title: Text('Склады'),
               selected: _selectedIndex == 3,
-              onTap: () => setState(() { _selectedIndex = 3; Navigator.pop(context); }),
+              enabled: currentUser != null,
+              onTap: () => setState(() {
+                _selectedIndex = 3;
+                Navigator.pop(context);
+              }),
+            ),
+            ListTile(
+              leading: Icon(Icons.history),
+              title: Text('История'),
+              enabled: currentUser != null,
+              selected: _selectedIndex == 4,
+              onTap: () => setState(() {
+                _selectedIndex = 4;
+                Navigator.pop(context);
+              }),
             ),
           ],
         ),

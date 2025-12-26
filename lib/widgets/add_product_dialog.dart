@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/product_create.dart';
 import '../models/supplier.dart';
@@ -6,8 +5,7 @@ import '../models/warehouse.dart';
 import '../services/api_service.dart';
 
 class AddProductDialog extends StatefulWidget {
-  final VoidCallback onSuccess;
-  const AddProductDialog({required this.onSuccess});
+  const AddProductDialog({super.key});
 
   @override
   State<AddProductDialog> createState() => _AddProductDialogState();
@@ -15,6 +13,7 @@ class AddProductDialog extends StatefulWidget {
 
 class _AddProductDialogState extends State<AddProductDialog> {
   final nameCtrl = TextEditingController();
+  final priceCtrl = TextEditingController();
   final qtyCtrl = TextEditingController();
   final codeCtrl = TextEditingController();
 
@@ -24,89 +23,151 @@ class _AddProductDialogState extends State<AddProductDialog> {
   List<Supplier> suppliers = [];
   List<Warehouse> warehouses = [];
 
+  bool loading = true;
+
   @override
   void initState() {
     super.initState();
     loadData();
   }
 
-  void loadData() async {
+  Future<void> loadData() async {
     suppliers = await ApiService.getSuppliers();
     warehouses = await ApiService.getWarehouses();
-    setState(() {});
+    setState(() => loading = false);
   }
 
-  String generateBarcode128() {
-    final rnd = Random();
-    return List.generate(12, (_) => rnd.nextInt(10)).join();
+  bool _isValidCode128(String code) {
+    final regex = RegExp(r'^[\x20-\x7E]+$'); 
+    return regex.hasMatch(code);
   }
 
   void submit() async {
-    if (supplier == null || warehouse == null) return;
+    final name = nameCtrl.text.trim();
+    final price = double.tryParse(priceCtrl.text);
+    final qty = int.tryParse(qtyCtrl.text);
+    final code = codeCtrl.text.trim();
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Название не может быть пустым')),
+      );
+      return;
+    }
+
+    if (price == null || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Цена должна быть положительным числом')),
+      );
+      return;
+    }
+
+    if (qty == null || qty < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Количество должно быть целым числом ≥ 1')),
+      );
+      return;
+    }
+
+    if (code.isNotEmpty && !_isValidCode128(code)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Код должен соответствовать стандарту Code 128')),
+      );
+      return;
+    }
+
+    if (supplier == null || warehouse == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Выберите склад и поставщика')),
+      );
+      return;
+    }
 
     final dto = ProductCreate(
-      name: nameCtrl.text,
-      quantity: int.parse(qtyCtrl.text),
-      productCode: codeCtrl.text,
+      name: name,
+      price: price,
+      code: code.isEmpty ? null : code,
       supplierID: supplier!.supplierID,
       warehouseID: warehouse!.warehouseID,
+      initialQuantity: qty,
     );
 
     final ok = await ApiService.createProduct(dto);
-    if (ok) {
-      widget.onSuccess();
-      Navigator.pop(context);
+
+    if (ok && mounted) {
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ошибка при создании товара')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Новый продукт'),
-      content: SingleChildScrollView(
-        child: Column(
-          children: [
-            TextField(controller: nameCtrl, decoration: InputDecoration(labelText: 'Название')),
-            TextField(controller: qtyCtrl, decoration: InputDecoration(labelText: 'Количество'), keyboardType: TextInputType.number),
-
-            DropdownButtonFormField<Supplier>(
-              hint: Text('Поставщик'),
-              items: suppliers
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
-                  .toList(),
-              onChanged: (v) => supplier = v,
-            ),
-
-            DropdownButtonFormField<Warehouse>(
-              hint: Text('Склад'),
-              items: warehouses
-                  .map((w) => DropdownMenuItem(value: w, child: Text(w.name)))
-                  .toList(),
-              onChanged: (v) => warehouse = v,
-            ),
-
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: codeCtrl,
-                    decoration: InputDecoration(labelText: 'Штрихкод'),
+      title: const Text('Новый товар'),
+      content: loading
+          ? const CircularProgressIndicator()
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Название'),
                   ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.qr_code),
-                  onPressed: () => setState(() {
-                    codeCtrl.text = generateBarcode128();
-                  }),
-                )
-              ],
+                  TextField(
+                    controller: priceCtrl,
+                    decoration: const InputDecoration(labelText: 'Цена'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    controller: qtyCtrl,
+                    decoration: const InputDecoration(labelText: 'Начальное количество'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+  controller: codeCtrl,
+  decoration: InputDecoration(
+    labelText: 'Код (необязательно)',
+  ),
+),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<Warehouse>(
+                    hint: const Text('Склад'),
+                    value: warehouse,
+                    items: warehouses
+                        .map((w) => DropdownMenuItem(
+                              value: w,
+                              child: Text(w.name),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => warehouse = v),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<Supplier>(
+                    hint: const Text('Поставщик'),
+                    value: supplier,
+                    items: suppliers
+                        .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s.name),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => supplier = v),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text('Отмена')),
-        ElevatedButton(onPressed: submit, child: Text('Сохранить')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        ElevatedButton(
+          onPressed: submit,
+          child: const Text('Сохранить'),
+        ),
       ],
     );
   }
